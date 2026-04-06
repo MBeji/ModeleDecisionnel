@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Choice Compass — Décision Stratégique</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --a: #2563EB; --a-light: #DBEAFE; --a-mid: #93C5FD;
+  --b: #7C3AED; --b-light: #EDE9FE; --b-mid: #C4B5FD;
+  --ok: #059669; --ok-light: #D1FAE5;
+  --warn: #D97706; --warn-light: #FEF3C7;
+  --gray: #F1F5F9; --border: #E2E8F0;
+  --text: #0F172A; --muted: #64748B;
+  --bg: #FAFAFA;
+  --radius: 12px; --radius-sm: 8px;
+  --shadow: 0 1px 3px rgba(0,0,0,.08), 0 4px 16px rgba(0,0,0,.04);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; font-size: 14px; line-height: 1.5; }
+ 
+/* ── HEADER ── */
+.app-header {
+  background: var(--text); padding: 20px 32px;
+  position: sticky; top: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: space-between; gap: 24px; flex-wrap: wrap;
+}
+.header-left h1 { font-family: 'DM Serif Display', serif; font-size: 20px; color: #fff; font-weight: 400; letter-spacing: -.3px; }
+.header-left p { color: #94A3B8; font-size: 12px; margin-top: 2px; }
+.options-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.option-tag { display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.15); border-radius: var(--radius-sm); padding: 6px 12px; }
+.option-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.option-tag input { background: none; border: none; outline: none; color: #fff; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; width: 150px; }
+.option-tag input::placeholder { color: #64748B; }
+ 
+/* ── TABS ── */
+.tabs-bar { display: flex; gap: 0; padding: 0 32px; background: #1E293B; border-bottom: 1px solid rgba(255,255,255,.08); }
+.tab-btn { padding: 12px 20px; background: none; border: none; color: #94A3B8; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; cursor: pointer; border-bottom: 2px solid transparent; transition: all .2s; white-space: nowrap; }
+.tab-btn:hover { color: #fff; }
+.tab-btn.active { color: #fff; border-bottom-color: #60A5FA; }
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+ 
+/* ── LAYOUT ── */
+.main { display: grid; grid-template-columns: 1fr 380px; gap: 20px; padding: 20px 24px; max-width: 1400px; margin: 0 auto; }
+@media (max-width: 1100px) { .main { grid-template-columns: 1fr; } }
+.sim-layout { padding: 20px 24px; max-width: 1100px; margin: 0 auto; }
+ 
+/* ── CARDS ── */
+.card { background: #fff; border-radius: var(--radius); border: 1px solid var(--border); padding: 20px 22px; box-shadow: var(--shadow); }
+.card-title { font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; }
+ 
+/* ── CRITERIA TABLE ── */
+.table-header { display: grid; grid-template-columns: 1fr 130px 90px 90px 36px; gap: 8px; padding: 0 4px 8px; border-bottom: 1px solid var(--border); margin-bottom: 4px; }
+.table-header span { font-size: 10px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .07em; }
+.table-header span:nth-child(3), .table-header span:nth-child(4) { text-align: center; }
+.criterion-row { display: grid; grid-template-columns: 1fr 130px 90px 90px 36px; gap: 8px; align-items: center; padding: 7px 4px; border-radius: var(--radius-sm); transition: background .15s; }
+.criterion-row:hover { background: var(--gray); }
+.crit-name { font-size: 13px; font-weight: 500; background: none; border: none; outline: none; color: var(--text); font-family: 'DM Sans', sans-serif; width: 100%; padding: 4px 6px; border-radius: 6px; border: 1px solid transparent; transition: border-color .15s, background .15s; }
+.crit-name:focus { border-color: var(--border); background: #fff; }
+.weight-cell { display: flex; align-items: center; gap: 6px; }
+.weight-input { width: 52px; padding: 4px 8px; border-radius: 6px; border: 1px solid var(--border); background: var(--gray); font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600; color: var(--text); text-align: center; outline: none; }
+.weight-pct { font-size: 12px; color: var(--muted); }
+.score-cell { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.score-val { font-size: 13px; font-weight: 600; min-width: 24px; text-align: center; }
+.score-val.a-val { color: var(--a); }
+.score-val.b-val { color: var(--b); }
+input[type=range] { -webkit-appearance: none; width: 72px; height: 4px; border-radius: 2px; outline: none; cursor: pointer; background: var(--border); }
+input[type=range].slider-a::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; border-radius: 50%; background: var(--a); cursor: pointer; }
+input[type=range].slider-b::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; border-radius: 50%; background: var(--b); cursor: pointer; }
+input[type=range].slider-fin::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; border-radius: 50%; background: var(--ok); cursor: pointer; }
+.del-btn { width: 28px; height: 28px; border-radius: 6px; background: none; border: 1px solid transparent; color: #CBD5E1; cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center; transition: all .15s; }
+.del-btn:hover { background: #FEE2E2; color: #EF4444; border-color: #FECACA; }
+.add-row-btn { display: flex; align-items: center; gap: 6px; margin-top: 12px; padding: 8px 12px; background: none; border: 1px dashed var(--border); border-radius: var(--radius-sm); cursor: pointer; color: var(--muted); font-family: 'DM Sans', sans-serif; font-size: 13px; transition: all .15s; width: 100%; }
+.add-row-btn:hover { background: var(--gray); border-color: #94A3B8; color: var(--text); }
+.weight-status { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: var(--radius-sm); font-size: 12px; font-weight: 500; margin-top: 12px; transition: all .2s; }
+.weight-status.ok { background: var(--ok-light); color: #065F46; }
+.weight-status.bad { background: #FEE2E2; color: #991B1B; }
+.weight-bar { flex: 1; height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
+.weight-bar-fill { height: 100%; border-radius: 2px; transition: width .3s, background .3s; }
+ 
+/* ── SCORE CARDS ── */
+.scores-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+.score-card { border-radius: var(--radius); padding: 16px; text-align: center; }
+.score-card.a-card { background: var(--a-light); border: 1px solid var(--a-mid); }
+.score-card.b-card { background: var(--b-light); border: 1px solid var(--b-mid); }
+.score-card-label { font-size: 11px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; margin-bottom: 4px; }
+.score-card.a-card .score-card-label { color: var(--a); }
+.score-card.b-card .score-card-label { color: var(--b); }
+.score-card-name { font-size: 12px; color: var(--muted); margin-bottom: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.score-card-num { font-family: 'DM Serif Display', serif; font-size: 40px; line-height: 1; }
+.score-card.a-card .score-card-num { color: var(--a); }
+.score-card.b-card .score-card-num { color: var(--b); }
+.score-card-denom { font-size: 16px; opacity: .5; }
+.score-card-bar { height: 4px; border-radius: 2px; margin-top: 10px; background: rgba(255,255,255,.5); overflow: hidden; }
+.score-card-bar-fill { height: 100%; border-radius: 2px; transition: width .4s; }
+.a-card .score-card-bar-fill { background: var(--a); }
+.b-card .score-card-bar-fill { background: var(--b); }
+ 
+/* ── VERDICT ── */
+.verdict-box { border-radius: var(--radius); padding: 14px 16px; display: flex; align-items: flex-start; gap: 10px; transition: all .3s; }
+.verdict-icon { font-size: 20px; line-height: 1; flex-shrink: 0; margin-top: 1px; }
+.verdict-title { font-size: 13px; font-weight: 600; margin-bottom: 2px; }
+.verdict-sub { font-size: 12px; line-height: 1.5; }
+.verdict-box.go { background: var(--ok-light); border: 1px solid #6EE7B7; }
+.verdict-box.go .verdict-title { color: #065F46; }
+.verdict-box.go .verdict-sub { color: #047857; }
+.verdict-box.stay { background: var(--warn-light); border: 1px solid #FCD34D; }
+.verdict-box.stay .verdict-title { color: #92400E; }
+.verdict-box.stay .verdict-sub { color: #B45309; }
+.verdict-box.neutral { background: var(--gray); border: 1px solid var(--border); }
+.verdict-box.neutral .verdict-title { color: var(--text); }
+.verdict-box.neutral .verdict-sub { color: var(--muted); }
+ 
+/* ── PROFILES ── */
+.profile-btns { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+.profile-btn { padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 500; background: var(--gray); border: 1px solid var(--border); cursor: pointer; font-family: 'DM Sans', sans-serif; color: var(--muted); transition: all .15s; }
+.profile-btn:hover { border-color: #94A3B8; color: var(--text); }
+.profile-btn.active { background: var(--text); color: #fff; border-color: var(--text); }
+ 
+/* ── CHARTS ── */
+.charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 800px) { .charts-grid { grid-template-columns: 1fr; } }
+.chart-box { background: #fff; border-radius: var(--radius); border: 1px solid var(--border); padding: 18px; box-shadow: var(--shadow); }
+.chart-title { font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-bottom: 14px; }
+ 
+/* ── EXPORT / RESET ── */
+.export-btn { display: flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: var(--radius-sm); background: var(--text); color: #fff; border: none; font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 500; cursor: pointer; transition: opacity .15s; }
+.export-btn:hover { opacity: .8; }
+.reset-btn { padding: 6px 12px; border-radius: var(--radius-sm); background: none; border: 1px solid var(--border); font-family: 'DM Sans', sans-serif; font-size: 11px; color: var(--muted); cursor: pointer; transition: all .15s; }
+.reset-btn:hover { background: var(--gray); color: var(--text); }
+ 
+/* ── SIMULATOR ── */
+.sim-params { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+@media (max-width: 700px) { .sim-params { grid-template-columns: 1fr; } }
+.param-row { display: flex; flex-direction: column; gap: 5px; }
+.param-label { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+.param-input-row { display: flex; align-items: center; gap: 8px; }
+.param-input-row input[type=range] { flex: 1; width: auto; }
+.param-val { font-size: 13px; font-weight: 600; min-width: 60px; text-align: right; color: var(--text); }
+.sim-metrics { display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; margin-bottom: 20px; }
+@media (max-width: 700px) { .sim-metrics { grid-template-columns: 1fr 1fr; } }
+.sim-metric { background: var(--gray); border-radius: var(--radius-sm); padding: 12px 14px; }
+.sim-metric-label { font-size: 11px; color: var(--muted); margin-bottom: 4px; }
+.sim-metric-val { font-size: 20px; font-weight: 500; }
+.sim-metric-val.green { color: var(--ok); }
+.sim-metric-val.blue { color: var(--a); }
+.sim-metric-val.purple { color: var(--b); }
+.sim-metric-val.amber { color: var(--warn); }
+.sim-charts { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+@media (max-width: 700px) { .sim-charts { grid-template-columns: 1fr; } }
+.sim-legend { display: flex; flex-wrap: wrap; gap: 14px; margin-bottom: 10px; }
+.sim-legend span { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--muted); }
+.leg-sq { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+.sim-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.sim-table th { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); padding: 6px 10px; border-bottom: 1px solid var(--border); text-align: right; }
+.sim-table th:first-child { text-align: left; }
+.sim-table td { padding: 7px 10px; text-align: right; border-bottom: .5px solid var(--border); color: var(--text); }
+.sim-table td:first-child { text-align: left; font-weight: 500; }
+.sim-table tr:last-child td { background: var(--gray); font-weight: 600; border-bottom: none; }
+.sim-verdict { border-radius: var(--radius); padding: 14px 16px; display: flex; align-items: flex-start; gap: 10px; margin-top: 16px; }
+.sim-verdict.go { background: var(--ok-light); border: 1px solid #6EE7B7; }
+.sim-verdict.stay { background: var(--warn-light); border: 1px solid #FCD34D; }
+.sim-verdict.neutral { background: var(--gray); border: 1px solid var(--border); }
+.sep { height: 1px; background: var(--border); margin: 20px 0; }
+</style>
+</head>
+<body>
+ 
+<header class="app-header">
+  <div class="header-left">
+    <h1>Choice Compass</h1>
+    <p>Modèle de décision stratégique multi-critères</p>
+  </div>
+  <div class="options-row">
+    <div class="option-tag">
+      <div class="option-dot" style="background:var(--a)"></div>
+      <input type="text" id="label-a" value="Option A" placeholder="Nom option A">
+    </div>
+    <div class="option-tag">
+      <div class="option-dot" style="background:var(--b)"></div>
+      <input type="text" id="label-b" value="Option B" placeholder="Nom option B">
+    </div>
+    <button class="export-btn" onclick="exportCSV()">↓ CSV</button>
+  </div>
+</header>
+ 
+<div class="tabs-bar">
+  <button class="tab-btn active" onclick="switchTab('model', this)">Modèle multi-critères</button>
+  <button class="tab-btn" onclick="switchTab('sim', this)">Simulation financière 5 ans</button>
+</div>
+ 
+<!-- ═══════════════════════════════════════════ TAB 1: MODEL ══ -->
+<div id="tab-model" class="tab-panel active">
+<div class="main">
+  <div style="display:flex;flex-direction:column;gap:16px;">
+    <div class="card">
+      <div class="card-title">
+        Critères & Pondérations
+        <button class="reset-btn" onclick="resetToDefault()">Réinitialiser</button>
+      </div>
+      <div class="table-header">
+        <span>Critère</span><span>Poids</span><span>Score A</span><span>Score B</span><span></span>
+      </div>
+      <div id="criteria-list"></div>
+      <button class="add-row-btn" onclick="addCriterion()">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1v12M1 7h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        Ajouter un critère
+      </button>
+      <div class="weight-status" id="weight-status">
+        <span id="weight-status-text">Poids : 100%</span>
+        <div class="weight-bar"><div class="weight-bar-fill" id="weight-bar-fill"></div></div>
+      </div>
+    </div>
+    <div class="charts-grid">
+      <div class="chart-box"><div class="chart-title">Radar — profil par critère</div><div style="position:relative;height:260px"><canvas id="radarChart"></canvas></div></div>
+      <div class="chart-box"><div class="chart-title">Scores pondérés par critère</div><div style="position:relative;height:260px"><canvas id="barChart"></canvas></div></div>
+      <div class="chart-box"><div class="chart-title">Répartition des pondérations</div><div style="position:relative;height:240px"><canvas id="donutChart"></canvas></div></div>
+      <div class="chart-box"><div class="chart-title">Scores bruts A vs B</div><div style="position:relative;height:240px"><canvas id="polarChart"></canvas></div></div>
+    </div>
+  </div>
+ 
+  <div style="display:flex;flex-direction:column;gap:16px;">
+    <div class="card">
+      <div class="card-title">Résultats</div>
+      <div class="scores-grid">
+        <div class="score-card a-card">
+          <div class="score-card-label">Option A</div>
+          <div class="score-card-name" id="label-a-disp">Option A</div>
+          <div class="score-card-num" id="score-a-disp">—<span class="score-card-denom">/10</span></div>
+          <div class="score-card-bar"><div class="score-card-bar-fill" id="bar-a"></div></div>
+        </div>
+        <div class="score-card b-card">
+          <div class="score-card-label">Option B</div>
+          <div class="score-card-name" id="label-b-disp">Option B</div>
+          <div class="score-card-num" id="score-b-disp">—<span class="score-card-denom">/10</span></div>
+          <div class="score-card-bar"><div class="score-card-bar-fill" id="bar-b"></div></div>
+        </div>
+      </div>
+      <div class="verdict-box neutral" id="verdict-box">
+        <div class="verdict-icon">⚖️</div>
+        <div>
+          <div class="verdict-title" id="verdict-title">Zone grise</div>
+          <div class="verdict-sub" id="verdict-sub">Ajuste les critères pour affiner le verdict.</div>
+        </div>
+      </div>
+    </div>
+ 
+    <div class="card">
+      <div class="card-title">Analyse de sensibilité</div>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:12px;">Profils de décideur pré-configurés — applique instantanément des pondérations différentes.</p>
+      <div class="profile-btns" id="profile-btns"></div>
+      <div id="sensitivity-scores" style="display:flex;gap:10px;"></div>
+    </div>
+ 
+    <div class="card">
+      <div class="card-title">Écart A vs B par critère</div>
+      <div id="gap-bars"></div>
+    </div>
+ 
+    <div class="card">
+      <div class="card-title">Interprétation</div>
+      <div id="interpretation" style="font-size:13px;color:var(--muted);line-height:1.7;"></div>
+    </div>
+  </div>
+</div>
+</div>
+ 
+<!-- ═══════════════════════════════════════════ TAB 2: SIMULATOR ══ -->
+<div id="tab-sim" class="tab-panel">
+<div class="sim-layout">
+ 
+  <div class="card" style="margin-bottom:16px;">
+    <div class="card-title">Paramètres de la simulation</div>
+    <div class="sim-params">
+      <div class="param-row">
+        <div class="param-label">Salaire actuel Option A (k/an)</div>
+        <div class="param-input-row"><input type="range" class="slider-fin" id="s-sal" min="60" max="300" step="5" value="120" oninput="simUpd()"><span class="param-val" id="sv-sal">120 k</span></div>
+      </div>
+      <div class="param-row">
+        <div class="param-label">Hausse salariale Option B (%)</div>
+        <div class="param-input-row"><input type="range" class="slider-fin" id="s-raise" min="30" max="120" step="5" value="75" oninput="simUpd()"><span class="param-val" id="sv-raise">+75%</span></div>
+      </div>
+      <div class="param-row">
+        <div class="param-label">Revalorisation annuelle Option A (%)</div>
+        <div class="param-input-row"><input type="range" class="slider-fin" id="s-ga" min="0" max="8" step="0.5" value="3" oninput="simUpd()"><span class="param-val" id="sv-ga">+3%</span></div>
+      </div>
+      <div class="param-row">
+        <div class="param-label">Revalorisation annuelle Option B (%)</div>
+        <div class="param-input-row"><input type="range" class="slider-fin" id="s-gb" min="0" max="20" step="1" value="8" oninput="simUpd()"><span class="param-val" id="sv-gb">+8%</span></div>
+      </div>
+      <div class="param-row">
+        <div class="param-label">Probabilité d'échec Option B (%)</div>
+        <div class="param-input-row"><input type="range" class="slider-fin" id="s-risk" min="5" max="70" step="5" value="30" oninput="simUpd()"><span class="param-val" id="sv-risk">30%</span></div>
+      </div>
+      <div class="param-row">
+        <div class="param-label">Durée transition si échec (mois)</div>
+        <div class="param-input-row"><input type="range" class="slider-fin" id="s-trans" min="1" max="12" step="1" value="6" oninput="simUpd()"><span class="param-val" id="sv-trans">6 mois</span></div>
+      </div>
+      <div class="param-row">
+        <div class="param-label">Filet de sécurité Option A (années)</div>
+        <div class="param-input-row"><input type="range" class="slider-fin" id="s-indem" min="1" max="5" step="0.5" value="3" oninput="simUpd()"><span class="param-val" id="sv-indem">3 ans</span></div>
+      </div>
+      <div class="param-row">
+        <div class="param-label">Année d'échec probable (si échec)</div>
+        <div class="param-input-row"><input type="range" class="slider-fin" id="s-fy" min="1" max="5" step="1" value="2" oninput="simUpd()"><span class="param-val" id="sv-fy">Année 2</span></div>
+      </div>
+    </div>
+ 
+    <div class="sim-metrics" id="sim-metrics"></div>
+  </div>
+ 
+  <div class="sim-charts">
+    <div class="chart-box">
+      <div class="chart-title">Salaires annuels comparés</div>
+      <div class="sim-legend">
+        <span><span class="leg-sq" style="background:#2563EB"></span><span id="leg-a-sal">Option A</span></span>
+        <span><span class="leg-sq" style="background:#7C3AED"></span><span id="leg-b-sal">Option B — succès</span></span>
+        <span><span class="leg-sq" style="background:#D97706"></span>Option B — échec</span>
+      </div>
+      <div style="position:relative;height:280px"><canvas id="simBar"></canvas></div>
+    </div>
+    <div class="chart-box">
+      <div class="chart-title">Cumul financier sur 5 ans</div>
+      <div class="sim-legend">
+        <span><span class="leg-sq" style="background:#2563EB"></span><span id="leg-a-cum">Option A</span></span>
+        <span><span class="leg-sq" style="background:#7C3AED"></span><span id="leg-b-cum">Option B succès</span></span>
+        <span><span class="leg-sq" style="background:#D97706"></span>Espérance pondérée</span>
+      </div>
+      <div style="position:relative;height:280px"><canvas id="simLine"></canvas></div>
+    </div>
+  </div>
+ 
+  <div class="card">
+    <div class="card-title">Tableau comparatif annuel</div>
+    <div style="overflow-x:auto"><table class="sim-table" id="sim-table"></table></div>
+    <div class="sim-verdict neutral" id="sim-verdict">
+      <div style="font-size:20px;flex-shrink:0">⚖️</div>
+      <div>
+        <div style="font-size:13px;font-weight:600;margin-bottom:3px" id="sv-title">Calcul en cours...</div>
+        <div style="font-size:12px;line-height:1.6" id="sv-sub"></div>
+      </div>
+    </div>
+  </div>
+ 
+</div>
+</div>
+ 
+<script>
+// ══════════════════════════════════════════
+// SHARED STATE
+// ══════════════════════════════════════════
+let criteria = [
+  { id:1, name:"Gain salarial",          weight:25, a:5, b:9 },
+  { id:2, name:"Stabilité / risque",     weight:20, a:9, b:4 },
+  { id:3, name:"Challenge & impact",     weight:20, a:5, b:9 },
+  { id:4, name:"Trajectoire carrière",   weight:15, a:5, b:9 },
+  { id:5, name:"Filet de sécurité",      weight:10, a:9, b:3 },
+  { id:6, name:"Résilience contexte IA", weight:10, a:7, b:5 },
+];
+const DEFAULT_CRITERIA = JSON.parse(JSON.stringify(criteria));
+const profiles = [
+  { name:"Prudent",    weights:[10,35,15,10,20,10] },
+  { name:"Équilibré",  weights:[25,20,20,15,10,10] },
+  { name:"Ambitieux",  weights:[35,10,30,15,5,5]   },
+];
+let activeProfile = null;
+let nextId = 7;
+let radarChart, barChart, donutChart, polarChart, simBar, simLine;
+ 
+// ══════════════════════════════════════════
+// TABS
+// ══════════════════════════════════════════
+function switchTab(id, btn) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-'+id).classList.add('active');
+  btn.classList.add('active');
+  if (id === 'sim') { simUpd(); updateSimLegends(); }
+}
+ 
+function updateSimLegends() {
+  const la = document.getElementById('label-a').value || 'Option A';
+  const lb = document.getElementById('label-b').value || 'Option B';
+  ['leg-a-sal','leg-a-cum'].forEach(id => { const el=document.getElementById(id); if(el) el.textContent=la; });
+  ['leg-b-sal','leg-b-cum'].forEach(id => { const el=document.getElementById(id); if(el) el.textContent=lb+' — succès'; });
+}
+ 
+// ══════════════════════════════════════════
+// MODEL: CRITERIA
+// ══════════════════════════════════════════
+function renderCriteria() {
+  const list = document.getElementById('criteria-list');
+  list.innerHTML = '';
+  criteria.forEach(c => {
+    const row = document.createElement('div');
+    row.className = 'criterion-row';
+    row.innerHTML = `
+      <input class="crit-name" type="text" value="${c.name}" oninput="updateName(${c.id},this.value)" placeholder="Nom du critère">
+      <div class="weight-cell"><input class="weight-input" type="number" min="0" max="100" value="${c.weight}" oninput="updateWeight(${c.id},this.value)"><span class="weight-pct">%</span></div>
+      <div class="score-cell"><span class="score-val a-val" id="sav-${c.id}">${c.a}</span><input type="range" class="slider-a" min="1" max="10" step="1" value="${c.a}" oninput="updateScore(${c.id},'a',this.value)"></div>
+      <div class="score-cell"><span class="score-val b-val" id="sbv-${c.id}">${c.b}</span><input type="range" class="slider-b" min="1" max="10" step="1" value="${c.b}" oninput="updateScore(${c.id},'b',this.value)"></div>
+      <button class="del-btn" onclick="deleteCriterion(${c.id})">×</button>`;
+    list.appendChild(row);
+  });
+}
+function addCriterion() { criteria.push({id:nextId++,name:"Nouveau critère",weight:0,a:5,b:5}); renderCriteria(); updateAll(); activeProfile=null; renderProfiles(); }
+function deleteCriterion(id) { if(criteria.length<=2) return; criteria=criteria.filter(c=>c.id!==id); renderCriteria(); updateAll(); activeProfile=null; renderProfiles(); }
+function updateName(id,val) { criteria.find(c=>c.id===id).name=val; updateCharts(); renderGapBars(); }
+function updateWeight(id,val) { const v=Math.max(0,Math.min(100,parseInt(val)||0)); criteria.find(c=>c.id===id).weight=v; activeProfile=null; renderProfiles(); updateAll(); }
+function updateScore(id,side,val) { const v=parseInt(val); criteria.find(c=>c.id===id)[side]=v; document.getElementById(side==='a'?`sav-${id}`:`sbv-${id}`).textContent=v; updateAll(); }
+function resetToDefault() { criteria=JSON.parse(JSON.stringify(DEFAULT_CRITERIA)); nextId=7; renderCriteria(); updateAll(); activeProfile=null; renderProfiles(); }
+ 
+// ══════════════════════════════════════════
+// MODEL: COMPUTE & UPDATE
+// ══════════════════════════════════════════
+function compute() {
+  const totalW = criteria.reduce((s,c)=>s+c.weight,0);
+  if(!totalW) return {sA:0,sB:0,totalW:0};
+  return { sA:(criteria.reduce((s,c)=>s+c.weight*c.a,0)/totalW).toFixed(1), sB:(criteria.reduce((s,c)=>s+c.weight*c.b,0)/totalW).toFixed(1), totalW };
+}
+function updateAll() { updateWeightStatus(); updateScoreCards(); updateVerdict(); updateCharts(); renderGapBars(); updateInterpretation(); updateSensitivityScores(); }
+function updateWeightStatus() {
+  const total=criteria.reduce((s,c)=>s+c.weight,0);
+  const status=document.getElementById('weight-status');
+  const fill=document.getElementById('weight-bar-fill');
+  fill.style.width=Math.min(total,100)+'%';
+  document.getElementById('weight-status-text').textContent=`Somme des poids : ${total}%`;
+  status.className='weight-status '+(total===100?'ok':'bad');
+  fill.style.background=total===100?'var(--ok)':total>100?'#EF4444':'#F59E0B';
+}
+function updateScoreCards() {
+  const {sA,sB}=compute();
+  document.getElementById('score-a-disp').innerHTML=`${sA}<span class="score-card-denom">/10</span>`;
+  document.getElementById('score-b-disp').innerHTML=`${sB}<span class="score-card-denom">/10</span>`;
+  document.getElementById('bar-a').style.width=(sA/10*100)+'%';
+  document.getElementById('bar-b').style.width=(sB/10*100)+'%';
+}
+function updateVerdict() {
+  const {sA,sB}=compute(); const diff=parseFloat(sB)-parseFloat(sA);
+  const box=document.getElementById('verdict-box');
+  const la=document.getElementById('label-a').value||'Option A';
+  const lb=document.getElementById('label-b').value||'Option B';
+  document.getElementById('label-a-disp').textContent=la;
+  document.getElementById('label-b-disp').textContent=lb;
+  if(diff>0.8){ box.className='verdict-box go'; document.querySelector('.verdict-icon').textContent='✅'; document.getElementById('verdict-title').textContent=`Signal clair : ${lb}`; document.getElementById('verdict-sub').textContent=`Écart de ${diff.toFixed(1)} pt en faveur de ${lb}.`; }
+  else if(diff<-0.8){ box.className='verdict-box stay'; document.querySelector('.verdict-icon').textContent='⚠️'; document.getElementById('verdict-title').textContent=`Signal clair : ${la}`; document.getElementById('verdict-sub').textContent=`Écart de ${Math.abs(diff).toFixed(1)} pt en faveur de ${la}.`; }
+  else{ box.className='verdict-box neutral'; document.querySelector('.verdict-icon').textContent='⚖️'; document.getElementById('verdict-title').textContent='Zone grise — décision personnelle'; document.getElementById('verdict-sub').textContent=`Écart de seulement ${Math.abs(diff).toFixed(1)} pt. Les facteurs non quantifiables sont décisifs.`; }
+}
+function updateInterpretation() {
+  const {sA,sB}=compute(); const diff=parseFloat(sB)-parseFloat(sA);
+  const la=document.getElementById('label-a').value||'Option A';
+  const lb=document.getElementById('label-b').value||'Option B';
+  const sb=[...criteria].sort((x,y)=>(y.b-y.a)*y.weight-(x.b-x.a)*x.weight)[0];
+  const sa=[...criteria].sort((x,y)=>(y.a-y.b)*y.weight-(x.a-x.b)*x.weight)[0];
+  document.getElementById('interpretation').innerHTML=`<p style="margin-bottom:8px">Le modèle agrège <strong>${criteria.length} critères</strong> avec pondérations.</p><p style="margin-bottom:8px"><strong style="color:var(--a)">${la}</strong> : <strong>${sA}/10</strong> — <strong style="color:var(--b)">${lb}</strong> : <strong>${sB}/10</strong> — Écart : <strong>${Math.abs(diff).toFixed(1)} pt</strong>.</p><p style="margin-bottom:8px">Avantage principal de <strong style="color:var(--b)">${lb}</strong> : <em>${sb.name}</em> (${sb.b} vs ${sb.a}, poids ${sb.weight}%).</p><p>Avantage principal de <strong style="color:var(--a)">${la}</strong> : <em>${sa.name}</em> (${sa.a} vs ${sa.b}, poids ${sa.weight}%).</p>`;
+}
+function renderGapBars() {
+  const container=document.getElementById('gap-bars'); container.innerHTML='';
+  const la=document.getElementById('label-a').value||'A'; const lb=document.getElementById('label-b').value||'B';
+  container.innerHTML=`<div style="display:flex;gap:16px;margin-bottom:8px"><span style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted)"><span style="width:12px;height:3px;background:var(--a);display:inline-block;border-radius:2px"></span>${la}</span><span style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted)"><span style="width:12px;height:3px;background:var(--b);display:inline-block;border-radius:2px"></span>${lb}</span></div>`;
+  [...criteria].sort((x,y)=>Math.abs(y.b-y.a)-Math.abs(x.b-x.a)).forEach(c=>{
+    const diff=c.b-c.a; const color=diff>0?'var(--b)':diff<0?'var(--a)':'var(--muted)';
+    container.innerHTML+=`<div style="display:flex;align-items:center;gap:10px;padding:5px 0;border-bottom:1px solid var(--border)"><div style="width:110px;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.name}</div><div style="flex:1"><div style="height:6px;width:${c.a*10}%;background:var(--a);border-radius:3px;min-width:4px"></div></div><div style="flex:1"><div style="height:6px;width:${c.b*10}%;background:var(--b);border-radius:3px;min-width:4px"></div></div><div style="width:36px;font-size:12px;font-weight:600;color:${color};text-align:right">${diff>=0?'+':''}${diff}</div></div>`;
+  });
+}
+function renderProfiles() {
+  const container=document.getElementById('profile-btns'); container.innerHTML='';
+  profiles.forEach((p,i)=>{ const btn=document.createElement('button'); btn.className='profile-btn'+(activeProfile===i?' active':''); btn.textContent=p.name; btn.onclick=()=>applyProfile(i); container.appendChild(btn); });
+}
+function applyProfile(i) {
+  const p=profiles[i]; const n=Math.min(p.weights.length,criteria.length);
+  for(let j=0;j<n;j++) criteria[j].weight=p.weights[j];
+  activeProfile=i; renderCriteria(); renderProfiles(); updateAll();
+}
+function updateSensitivityScores() {
+  const container=document.getElementById('sensitivity-scores'); container.innerHTML='';
+  profiles.forEach(p=>{
+    let wA=0,wB=0,tw=0; const n=Math.min(p.weights.length,criteria.length);
+    for(let j=0;j<n;j++){wA+=p.weights[j]*criteria[j].a;wB+=p.weights[j]*criteria[j].b;tw+=p.weights[j];}
+    if(!tw) return;
+    const sA=(wA/tw).toFixed(1),sB=(wB/tw).toFixed(1),diff=parseFloat(sB)-parseFloat(sA);
+    const icon=diff>0.8?'✅':diff<-0.8?'⚠️':'⚖️';
+    container.innerHTML+=`<div style="flex:1;background:var(--gray);border-radius:var(--radius-sm);padding:10px 12px;text-align:center;min-width:80px"><div style="font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">${p.name}</div><div style="font-size:11px;color:var(--a);font-weight:600">${sA}</div><div style="font-size:10px;color:var(--muted)">vs</div><div style="font-size:11px;color:var(--b);font-weight:600">${sB}</div><div style="font-size:18px;margin-top:4px">${icon}</div></div>`;
+  });
+}
+ 
+// ══════════════════════════════════════════
+// MODEL: CHARTS
+// ══════════════════════════════════════════
+function initCharts() {
+  radarChart=new Chart(document.getElementById('radarChart'),{type:'radar',data:{labels:[],datasets:[]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{r:{min:0,max:10,ticks:{stepSize:2,color:'#94A3B8',font:{size:10},backdropColor:'transparent'},grid:{color:'#E2E8F0'},pointLabels:{color:'#475569',font:{size:10}},angleLines:{color:'#E2E8F0'}}}}});
+  barChart=new Chart(document.getElementById('barChart'),{type:'bar',data:{labels:[],datasets:[]},options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{min:0,max:10,grid:{color:'#F1F5F9'},ticks:{color:'#94A3B8',font:{size:10}}},y:{grid:{display:false},ticks:{color:'#475569',font:{size:10}}}}}});
+  donutChart=new Chart(document.getElementById('donutChart'),{type:'doughnut',data:{labels:[],datasets:[]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{font:{size:10},color:'#475569',boxWidth:10,padding:8}}},cutout:'60%'}});
+  polarChart=new Chart(document.getElementById('polarChart'),{type:'polarArea',data:{labels:[],datasets:[]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{r:{min:0,max:10,ticks:{color:'#94A3B8',font:{size:9},backdropColor:'transparent'},grid:{color:'#E2E8F0'}}}}});
+}
+function updateCharts() {
+  if(!radarChart) return;
+  const la=document.getElementById('label-a').value||'A';
+  const lb=document.getElementById('label-b').value||'B';
+  const labels=criteria.map(c=>c.name.length>14?c.name.substring(0,14)+'…':c.name);
+  const scoresA=criteria.map(c=>c.a); const scoresB=criteria.map(c=>c.b);
+  const weights=criteria.map(c=>c.weight); const totalW=weights.reduce((s,w)=>s+w,0)||1;
+  const palette=['#2563EB','#7C3AED','#0891B2','#059669','#D97706','#DC2626','#1D4ED8','#065F46'];
+  radarChart.data.labels=labels;
+  radarChart.data.datasets=[{label:la,data:scoresA,borderColor:'#2563EB',backgroundColor:'rgba(37,99,235,.12)',borderWidth:2,pointRadius:3,pointBackgroundColor:'#2563EB'},{label:lb,data:scoresB,borderColor:'#7C3AED',backgroundColor:'rgba(124,58,237,.12)',borderWidth:2,pointRadius:3,pointBackgroundColor:'#7C3AED'}];
+  radarChart.update();
+  const wA=criteria.map(c=>+(c.weight*c.a/totalW).toFixed(2)); const wB=criteria.map(c=>+(c.weight*c.b/totalW).toFixed(2));
+  barChart.data.labels=labels; barChart.data.datasets=[{label:la,data:wA,backgroundColor:'#2563EB',borderRadius:4,barThickness:10},{label:lb,data:wB,backgroundColor:'#7C3AED',borderRadius:4,barThickness:10}];
+  barChart.options.scales.x.max=Math.ceil(Math.max(...wA,...wB)*1.2)||3; barChart.update();
+  donutChart.data.labels=labels; donutChart.data.datasets=[{data:weights,backgroundColor:criteria.map((_,i)=>palette[i%palette.length]),borderWidth:2,borderColor:'#fff'}]; donutChart.update();
+  polarChart.data.labels=labels; polarChart.data.datasets=[{label:la,data:scoresA,backgroundColor:criteria.map(()=>'rgba(37,99,235,.25)'),borderColor:'#2563EB',borderWidth:1.5},{label:lb,data:scoresB,backgroundColor:criteria.map(()=>'rgba(124,58,237,.18)'),borderColor:'#7C3AED',borderWidth:1.5}]; polarChart.update();
+}
+ 
+// ══════════════════════════════════════════
+// SIMULATOR
+// ══════════════════════════════════════════
+function simGet(id){return +document.getElementById(id).value;}
+function simSet(id,txt){document.getElementById(id).textContent=txt;}
+function fmt(v){return new Intl.NumberFormat('fr-FR',{maximumFractionDigits:0}).format(Math.round(v));}
+ 
+function simUpd() {
+  const sal=simGet('s-sal'), raise=simGet('s-raise')/100, ga=simGet('s-ga')/100, gb=simGet('s-gb')/100;
+  const risk=simGet('s-risk')/100, trans=simGet('s-trans'), indem=simGet('s-indem'), fy=simGet('s-fy');
+  simSet('sv-sal', sal+' k'); simSet('sv-raise', '+'+simGet('s-raise')+'%');
+  simSet('sv-ga', '+'+simGet('s-ga')+'%'); simSet('sv-gb', '+'+simGet('s-gb')+'%');
+  simSet('sv-risk', simGet('s-risk')+'%'); simSet('sv-trans', trans+' mois');
+  simSet('sv-indem', indem+' ans'); simSet('sv-fy', 'Année '+fy);
+ 
+  const la=document.getElementById('label-a').value||'Option A';
+  const lb=document.getElementById('label-b').value||'Option B';
+ 
+  const salB0=sal*(1+raise);
+  let sA=sal, sB=salB0;
+  const cumA=[0],cumB=[0],cumBfail=[0],cumBexp=[0];
+  const salAy=[],salBy=[],salBfailY=[];
+ 
+  for(let i=0;i<5;i++){
+    const y=i+1;
+    sA*=(1+ga); sB*=(1+gb); salAy.push(sA); salBy.push(sB);
+    const failSal = y<fy ? salB0*Math.pow(1+gb,y) : y===fy ? sA*(trans/12) : sal*Math.pow(1+ga,y);
+    salBfailY.push(failSal);
+    cumA.push(cumA[i]+sA); cumB.push(cumB[i]+sB); cumBfail.push(cumBfail[i]+failSal);
+    cumBexp.push(risk*cumBfail[i+1]+(1-risk)*cumB[i+1]);
+  }
+ 
+  const indemLost=sal*indem;
+  const gainSucc=cumB[5]-cumA[5];
+  const gainExp=cumBexp[5]-cumA[5]-indemLost;
+  const be=[1,2,3,4,5].findIndex((_,i)=>cumBexp[i+1]>cumA[i+1]+indemLost);
+ 
+  document.getElementById('sim-metrics').innerHTML=`
+    <div class="sim-metric"><div class="sim-metric-label">Salaire an 1 — ${la}</div><div class="sim-metric-val blue">${fmt(salAy[0])} k</div></div>
+    <div class="sim-metric"><div class="sim-metric-label">Salaire an 1 — ${lb}</div><div class="sim-metric-val purple">${fmt(salBy[0])} k</div></div>
+    <div class="sim-metric"><div class="sim-metric-label">Gain cumulé si succès (5 ans)</div><div class="sim-metric-val green">+${fmt(gainSucc)} k</div></div>
+    <div class="sim-metric"><div class="sim-metric-label">Gain net espéré (risque + filet)</div><div class="sim-metric-val ${gainExp>0?'green':'amber'}">${gainExp>0?'+':''}${fmt(gainExp)} k</div></div>`;
+ 
+  const ylabels=['An 1','An 2','An 3','An 4','An 5'];
+  const clabels=['Départ','An 1','An 2','An 3','An 4','An 5'];
+ 
+  if(!simBar){
+    simBar=new Chart(document.getElementById('simBar'),{type:'bar',data:{labels:ylabels,datasets:[]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{color:'#64748B',font:{size:11}}},y:{grid:{color:'#F1F5F9'},ticks:{color:'#64748B',font:{size:11},callback:v=>v+' k'}}}}});
+    simLine=new Chart(document.getElementById('simLine'),{type:'line',data:{labels:clabels,datasets:[]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{color:'#64748B',font:{size:11}}},y:{grid:{color:'#F1F5F9'},ticks:{color:'#64748B',font:{size:11},callback:v=>v+' k'}}}}});
+  }
+ 
+  simBar.data.labels=ylabels;
+  simBar.data.datasets=[
+    {label:la,data:salAy.map(v=>Math.round(v)),backgroundColor:'rgba(37,99,235,.75)',borderRadius:4,barPercentage:.6},
+    {label:lb+' succès',data:salBy.map(v=>Math.round(v)),backgroundColor:'rgba(124,58,237,.75)',borderRadius:4,barPercentage:.6},
+    {label:'Échec',data:salBfailY.map(v=>Math.round(v)),backgroundColor:'rgba(217,119,6,.5)',borderRadius:4,barPercentage:.6}
+  ];
+  simBar.update();
+ 
+  simLine.data.labels=clabels;
+  simLine.data.datasets=[
+    {label:la,data:cumA.map(v=>Math.round(v)),borderColor:'#2563EB',backgroundColor:'rgba(37,99,235,.07)',fill:true,tension:.3,pointRadius:4,borderWidth:2},
+    {label:lb,data:cumB.map(v=>Math.round(v)),borderColor:'#7C3AED',backgroundColor:'rgba(124,58,237,.05)',fill:true,tension:.3,pointRadius:4,borderWidth:2},
+    {label:'Espérance',data:cumBexp.map(v=>Math.round(v)),borderColor:'#D97706',backgroundColor:'rgba(217,119,6,.04)',fill:true,tension:.3,pointRadius:4,borderWidth:2,borderDash:[5,4]}
+  ];
+  simLine.update();
+ 
+  let rows=`<tr><th>Année</th><th style="color:#2563EB">Sal. ${la}</th><th style="color:#7C3AED">Sal. ${lb}</th><th>Δ annuel</th><th style="color:#2563EB">Cumul ${la}</th><th style="color:#7C3AED">Cumul ${lb}</th><th>Gain cumulé</th></tr>`;
+  for(let i=0;i<5;i++){
+    const delta=salBy[i]-salAy[i]; const gcum=cumB[i+1]-cumA[i+1];
+    rows+=`<tr><td>Année ${i+1}</td><td style="color:#2563EB">${fmt(salAy[i])} k</td><td style="color:#7C3AED">${fmt(salBy[i])} k</td><td style="color:${delta>0?'#059669':'#DC2626'}">${delta>0?'+':''}${fmt(delta)} k</td><td>${fmt(cumA[i+1])} k</td><td>${fmt(cumB[i+1])} k</td><td style="color:${gcum>0?'#059669':'#DC2626'}">${gcum>0?'+':''}${fmt(gcum)} k</td></tr>`;
+  }
+  rows+=`<tr><td>Total 5 ans</td><td style="color:#2563EB">${fmt(cumA[5])} k</td><td style="color:#7C3AED">${fmt(cumB[5])} k</td><td></td><td></td><td></td><td style="color:#059669">+${fmt(gainSucc)} k</td></tr>`;
+  document.getElementById('sim-table').innerHTML=rows;
+ 
+  const vd=document.getElementById('sim-verdict');
+  const beStr=be>=0?`Point d'équilibre atteint en année ${be+1}.`:`Équilibre non atteint sur 5 ans avec ce niveau de risque.`;
+  if(gainExp>0){
+    vd.className='sim-verdict go';
+    document.getElementById('sv-title').textContent='Signal financier : BOUGER';
+    document.getElementById('sv-sub').textContent=`Même en intégrant ${Math.round(risk*100)}% de risque et la perte du filet (${fmt(indemLost)} k), le gain net espéré sur 5 ans est +${fmt(gainExp)} k. ${beStr}`;
+  } else if(gainExp<-indemLost*0.3){
+    vd.className='sim-verdict stay';
+    document.getElementById('sv-title').textContent='Signal financier : RESTER';
+    document.getElementById('sv-sub').textContent=`Le risque et la perte du filet (${fmt(indemLost)} k) ne sont pas compensés. Gain net espéré : ${fmt(gainExp)} k. ${beStr}`;
+  } else {
+    vd.className='sim-verdict neutral';
+    document.getElementById('sv-title').textContent='Zone financière grise';
+    document.getElementById('sv-sub').textContent=`Gain net espéré proche de zéro (${fmt(gainExp)} k) une fois risque et filet intégrés. Décision personnelle. ${beStr}`;
+  }
+}
+ 
+// ══════════════════════════════════════════
+// EXPORT
+// ══════════════════════════════════════════
+function exportCSV() {
+  const la=document.getElementById('label-a').value||'Option A';
+  const lb=document.getElementById('label-b').value||'Option B';
+  const {sA,sB}=compute();
+  const totalW=criteria.reduce((s,c)=>s+c.weight,0)||1;
+  let csv=`Critère,Poids (%),Score ${la},Score ${lb},Score pondéré ${la},Score pondéré ${lb}\n`;
+  criteria.forEach(c=>{ const wA=(c.weight*c.a/totalW).toFixed(2),wB=(c.weight*c.b/totalW).toFixed(2); csv+=`"${c.name}",${c.weight},${c.a},${c.b},${wA},${wB}\n`; });
+  csv+=`\nScore final (/10),,,,${sA},${sB}\n`;
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='choice-compass.csv'; a.click();
+}
+ 
+// ══════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════
+renderCriteria(); initCharts(); renderProfiles(); updateAll();
+document.getElementById('label-a').addEventListener('input',()=>{ updateVerdict(); updateCharts(); renderGapBars(); updateInterpretation(); updateSimLegends(); });
+document.getElementById('label-b').addEventListener('input',()=>{ updateVerdict(); updateCharts(); renderGapBars(); updateInterpretation(); updateSimLegends(); });
+</script>
+</body>
+</html>
