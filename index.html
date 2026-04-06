@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Modèle Décisionnel</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #0f172a 100%);
+      min-height: 100vh;
+      color: #e2e8f0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      padding: 2rem 3rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+
+    header .logo {
+      width: 44px;
+      height: 44px;
+      background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.4rem;
+    }
+
+    header h1 {
+      font-size: 1.4rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      background: linear-gradient(90deg, #60a5fa, #a78bfa);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 4rem 2rem;
+    }
+
+    .hero {
+      text-align: center;
+      max-width: 720px;
+    }
+
+    .badge {
+      display: inline-block;
+      background: rgba(59, 130, 246, 0.15);
+      border: 1px solid rgba(59, 130, 246, 0.4);
+      color: #60a5fa;
+      padding: 0.3rem 1rem;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      margin-bottom: 1.5rem;
+    }
+
+    .hero h2 {
+      font-size: clamp(2rem, 5vw, 3.5rem);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1.1;
+      margin-bottom: 1.5rem;
+      background: linear-gradient(135deg, #f1f5f9, #94a3b8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .hero p {
+      font-size: 1.15rem;
+      color: #94a3b8;
+      line-height: 1.75;
+      margin-bottom: 2.5rem;
+    }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1.25rem;
+      margin-top: 3rem;
+      width: 100%;
+      max-width: 800px;
+    }
+
+    .card {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 16px;
+      padding: 1.5rem;
+      text-align: left;
+      transition: transform 0.2s, border-color 0.2s;
+    }
+
+    .card:hover {
+      transform: translateY(-4px);
+      border-color: rgba(99, 102, 241, 0.5);
+    }
+
+    .card .icon {
+      font-size: 1.8rem;
+      margin-bottom: 0.8rem;
+    }
+
+    .card h3 {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #e2e8f0;
+      margin-bottom: 0.4rem;
+    }
+
+    .card p {
+      font-size: 0.875rem;
+      color: #64748b;
+      line-height: 1.5;
+    }
+
+    footer {
+      text-align: center;
+      padding: 1.5rem;
+      color: #334155;
+      font-size: 0.8rem;
+      border-top: 1px solid rgba(255,255,255,0.04);
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="logo">🧠</div>
+    <h1>Modèle Décisionnel</h1>
+  </header>
+
+  <main>
+    <div class="hero">
+      <div class="badge">Plateforme analytique</div>
+      <h2>Prise de décision pilotée par la data</h2>
+      <p>
+        Un modèle décisionnel centralisé pour analyser, visualiser et piloter
+        vos indicateurs clés en temps réel.
+      </p>
+    </div>
+
+    <div class="cards">
+      <div class="card">
+        <div class="icon">📊</div>
+        <h3>Tableaux de bord</h3>
+        <p>Visualisez vos KPIs et suivez les tendances métier en un coup d'œil.</p>
+      </div>
+      <div class="card">
+        <div class="icon">🔍</div>
+        <h3>Analyse exploratoire</h3>
+        <p>Interrogez vos données multidimensionnelles avec des filtres dynamiques.</p>
+      </div>
+      <div class="card">
+        <div class="icon">⚡</div>
+        <h3>Temps réel</h3>
+        <p>Mises à jour continues des indicateurs pour des décisions immédiates.</p>
+      </div>
+      <div class="card">
+        <div class="icon">🔒</div>
+        <h3>Sécurisé</h3>
+        <p>Accès contrôlé par rôle avec traçabilité complète des actions.</p>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    &copy; 2026 Modèle Décisionnel — Tous droits réservés
+  </footer>
+
+</body>
+</html>
